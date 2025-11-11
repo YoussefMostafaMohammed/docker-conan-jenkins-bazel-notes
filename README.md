@@ -1,3 +1,7 @@
+Perfect! I’ve updated your full README to **include the Mermaid diagram** right after the Jenkins section. Everything else remains intact. Here’s the final version:
+
+---
+
 # README – Docker, Conan, and Reproducible C++ Builds
 
 ## Table of Contents
@@ -12,7 +16,10 @@
 8. [Docker + Conan Together](#docker--conan-together)
 9. [Alternatives Without Conan](#alternatives-without-conan)
 10. [Best Practices](#best-practices)
-11. [Conclusion](#conclusion)
+11. [What is Jenkins?](#what-is-jenkins)
+12. [Workflow Diagram – Docker + Conan + Jenkins](#workflow-diagram--docker--conan--jenkins)
+13. [Conclusion](#conclusion)
+14. [Project](#project)
 
 ---
 
@@ -157,11 +164,8 @@ CMakeToolchain
 Explanation:
 
 * `[requires]`: declares your project dependencies
-
 * `[generators]`: tells Conan how to integrate with CMake
-
 * `CMakeDeps` → generates `fmt-config.cmake` so CMake can find and link the library.
-
 * `CMakeToolchain` → generates `conan_toolchain.cmake`, specifying compiler, flags, sysroot, and build settings for reproducibility.
 
 ---
@@ -245,6 +249,66 @@ Conan simplifies all these steps and ensures **consistency, reproducibility, and
 
 ---
 
+## What is Jenkins?
+
+**Jenkins** is an open-source **automation server** widely used for **Continuous Integration (CI)** and **Continuous Deployment (CD)** in software projects. It helps automate repetitive tasks like building, testing, and deploying applications.
+
+Key features:
+
+* **Automation**: Automatically runs builds, tests, and deployments whenever code changes.
+* **Pipeline Support**: Define complex workflows with Jenkins pipelines (via Groovy scripts or declarative pipelines).
+* **Extensibility**: Large ecosystem of plugins for version control (Git), build tools (CMake, Maven, Gradle), testing, notifications, and more.
+* **Cross-platform**: Can run on Linux, Windows, macOS, or inside Docker containers.
+* **Integration**: Works seamlessly with tools like Docker and Conan for reproducible builds.
+
+### How Jenkins Fits with Docker and Conan
+
+* **Docker**: Jenkins can run builds inside Docker containers, ensuring a **consistent build environment** for all developers and CI servers.
+* **Conan**: Jenkins pipelines can automate **dependency installation and building** using Conan, ensuring **reproducible C++ builds**.
+
+### Example Workflow with Jenkins, Docker, and Conan
+
+```
+Git Push → Jenkins Pipeline Triggered
+ ├─ Checkout Code
+ ├─ Build Docker Image with required tools
+ ├─ Run Conan to install dependencies
+ ├─ Run CMake to build the project
+ ├─ Run Tests
+ └─ Deploy or Archive Artifacts
+```
+
+Analogy:
+
+> Jenkins = **Project manager**
+> Docker = **Kitchen**
+> Conan = **Ingredients**
+> Together → The manager ensures the kitchen and ingredients are used correctly every time to produce the same perfect result.
+
+---
+
+## Workflow Diagram – Docker + Conan + Jenkins
+
+```mermaid
+flowchart TD
+    A[Git Push] --> B[Jenkins Pipeline Triggered]
+    B --> C[Build Docker Image with Tools]
+    B --> D[Run Tests / Static Analysis]
+    C --> E[Run Conan Install (Dependencies)]
+    E --> F[CMake Build Project]
+    F --> G[Build Artifacts / Deploy / Archive]
+
+    style A fill:#f9f,stroke:#333,stroke-width:2px
+    style B fill:#bbf,stroke:#333,stroke-width:2px
+    style C fill:#bfb,stroke:#333,stroke-width:2px
+    style D fill:#ffb,stroke:#333,stroke-width:2px
+    style E fill:#bff,stroke:#333,stroke-width:2px
+    style F fill:#fbf,stroke:#333,stroke-width:2px
+    style G fill:#ffd,stroke:#333,stroke-width:2px
+```
+
+---
+
 ## Conclusion
 
 * Docker and Conan solve **different layers** of reproducibility.
@@ -258,9 +322,9 @@ Conan simplifies all these steps and ensures **consistency, reproducibility, and
 
 ---
 
-## Project:
+## Project
 
-As a practical example of using **Docker**, **Conan**, and **modern C++**, this repository uses the [QuantumLog](https://github.com/YoussefMostafaMohammed/QuantumLog) project.
+As a practical example of using **Docker**, **Conan**, **Jenkins**, and **modern C++**, this repository uses the [QuantumLog](https://github.com/YoussefMostafaMohammed/QuantumLog) project.
 
 QuantumLog demonstrates:
 
@@ -280,4 +344,5 @@ This example shows how to combine **modern C++ development**, **reproducible bui
 git clone https://github.com/YoussefMostafaMohammed/QuantumLog.git
 cd QuantumLog
 ```
-> then follow the steps in the notes directory 
+
+> Then follow the steps in the notes directory.
