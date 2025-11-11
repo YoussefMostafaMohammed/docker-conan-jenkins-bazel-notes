@@ -1,7 +1,3 @@
-Perfect! I’ve updated your full README to **include the Mermaid diagram** right after the Jenkins section. Everything else remains intact. Here’s the final version:
-
----
-
 # README – Docker, Conan, and Reproducible C++ Builds
 
 ## Table of Contents
