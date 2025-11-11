@@ -287,12 +287,12 @@ Analogy:
 
 ```mermaid
 flowchart TD
-    A[Git Push] --> B[Jenkins Pipeline Triggered]
-    B --> C[Build Docker Image with Tools]
-    B --> D[Run Tests / Static Analysis]
-    C --> E[Run Conan Install (Dependencies)]
-    E --> F[CMake Build Project]
-    F --> G[Build Artifacts / Deploy / Archive]
+    A["Git Push"] --> B["Jenkins Pipeline Triggered"]
+    B --> C["Build Docker Image with Tools"]
+    B --> D["Run Tests / Static Analysis"]
+    C --> E["Run Conan Install (Dependencies)"]
+    E --> F["CMake Build Project"]
+    F --> G["Build Artifacts / Deploy / Archive"]
 
     style A fill:#f9f,stroke:#333,stroke-width:2px
     style B fill:#bbf,stroke:#333,stroke-width:2px
@@ -301,6 +301,7 @@ flowchart TD
     style E fill:#bff,stroke:#333,stroke-width:2px
     style F fill:#fbf,stroke:#333,stroke-width:2px
     style G fill:#ffd,stroke:#333,stroke-width:2px
+
 ```
 
 ---
