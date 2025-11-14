@@ -84,8 +84,129 @@ Docker provides:
 * Standard libraries (`libstdc++`)
 * System libraries (`glibc`, `libm`, `libpthread`)
 
-✅ Simple programs compile successfully without third-party package managers.
+Simple programs compile successfully without third-party package managers.
 
+---
+
+Docker **does NOT copy your whole project into a global folder on your system.**
+Where Docker “saves” files depends on **how you build or run the container**.
+
+Below is the full explanation:
+
+---
+
+# 1. During `docker build`
+
+When you run:
+
+```bash
+docker build -t myimage .
+```
+
+Docker creates:
+
+### **📌 Build context**
+
+* It sends the **current directory (`.`)** to the Docker daemon.
+* The **build context is stored temporarily**, but Docker does **NOT save your project files permanently**.
+* Only the **filesystem layers** produced by RUN / COPY / ADD are saved into the **image layers**.
+
+### *Where are image layers stored?*
+
+On Linux (including Ubuntu / WSL2):
+
+```
+/var/lib/docker/
+```
+
+Inside it:
+
+```
+/var/lib/docker/overlay2/
+```
+
+Your project files only appear inside the **image layers** if you `COPY` or `ADD` them in the Dockerfile.
+
+---
+
+# 2. When you run a container (`docker run`)
+
+If you run a container normally:
+
+```bash
+docker run -it myimage
+```
+
+The container filesystem is stored in:
+
+```
+/var/lib/docker/overlay2/<container-layer-id>/
+```
+
+This contains the **merged root filesystem** for that container.
+
+**This is Docker internal storage, not your project folder.**
+
+---
+
+# 3. When using volumes or bind mounts
+
+## **A) Bind mount**
+
+If you do:
+
+```bash
+docker run -v $(pwd):/app myimage
+```
+
+Your project is NOT copied.
+Docker just **mounts your host folder** into the container.
+
+That folder remains wherever it originally is.
+
+---
+
+## **B) Named volumes**
+
+If you run:
+
+```bash
+docker volume create mydata
+docker run -v mydata:/app myimage
+```
+
+Docker stores volume data inside:
+
+```
+/var/lib/docker/volumes/mydata/_data/
+```
+
+---
+
+# Summary Table
+
+| Type of data   | Where it is stored                            |
+| -------------- | --------------------------------------------- |
+| Image layers   | `/var/lib/docker/overlay2/`                   |
+| Container data | `/var/lib/docker/overlay2/<container-id>/`    |
+| Named volumes  | `/var/lib/docker/volumes/<name>/_data/`       |
+| Bind mounts    | On your host filesystem (your project folder) |
+
+---
+
+# Check where your container filesystem lives
+
+Run:
+
+```bash
+docker inspect <container-id> | grep UpperDir
+```
+
+It returns something like:
+
+```
+"UpperDir": "/var/lib/docker/overlay2/abc123/diff"
+```
 ---
 
 ## Where Docker Gets C++ Libraries
@@ -101,6 +222,114 @@ RUN apt install -y libfmt-dev libspdlog-dev libboost-dev
 * Versions are fixed by OS repositories
 * Manual installation is error-prone
 * Transitive dependencies aren’t automatically resolved
+
+---
+
+# **Where does Docker get its `g++` libraries from?**
+
+Docker **does NOT provide any C++ libraries by itself**.
+The libraries used by `g++` inside Docker come entirely from the **base Linux distribution** of the image you choose.
+
+---
+
+# **Detailed Explanation**
+
+### ✔ 1. Docker image = a mini Linux OS
+
+For example:
+
+```Dockerfile
+FROM ubuntu:22.04
+```
+
+This means your container is running **Ubuntu 22.04**, with Ubuntu’s package manager (**APT**) and repositories.
+
+### ✔ 2. When you run inside Dockerfile:
+
+```Dockerfile
+RUN apt update && apt install -y g++ libstdc++-dev
+```
+
+Docker uses **APT**, and APT downloads packages from the repositories inside the container:
+
+```
+/etc/apt/sources.list
+```
+
+For Ubuntu images, these are:
+
+```
+http://archive.ubuntu.com/ubuntu
+http://security.ubuntu.com/ubuntu
+```
+
+So **all g++ packages and C++ standard libraries come from Ubuntu’s official servers**.
+
+---
+
+# 📦 **What exactly gets installed?**
+
+APT installs:
+
+### **C++ compiler**
+
+```
+/usr/bin/g++
+```
+
+### **C++ standard library (`libstdc++`)**
+
+```
+/usr/lib/x86_64-linux-gnu/libstdc++.so
+```
+
+### **Headers**
+
+```
+/usr/include/c++/<version>/
+```
+
+These are the **same packages you get if you install g++ on your normal Ubuntu machine**.
+
+---
+
+# **So where do the libraries come from?**
+
+> **Docker gets its g++, GCC, and C++ standard libraries from the OS repositories of the base image (Ubuntu, Debian, Alpine, etc.) — not from Docker.**
+
+---
+
+# If you use a different base image
+
+### With Debian:
+
+```
+FROM debian:bookworm
+```
+
+APT pulls `g++` and its libs from:
+
+```
+http://deb.debian.org/debian
+```
+
+### With Alpine:
+
+```
+FROM alpine:latest
+```
+
+Packages come from Alpine repositories via `apk`:
+
+```
+apk add g++ libstdc++
+```
+
+---
+
+# 🎯 Final Summary (one sentence)
+
+> **Docker does not provide g++ libraries — the C++ compiler and libstdc++ come from the package repositories of the base Linux image (Ubuntu, Debian, Alpine, etc.).**
 
 ---
 
@@ -128,9 +357,16 @@ Docker alone cannot:
 
 ---
 
+
+
 ## What is Conan and Why Use It?
 
-[Conan](https://github.com/conan-io/conan) is a **C/C++ package manager** that automates:
+C[Conan](https://github.com/conan-io/conan) is a **C/C++ package manager** (like APT for Linux or pip for Python) but designed specifically for C++ libraries.
+
+It downloads prebuilt or source packages (FMT, Boost, OpenCV, etc.)
+and integrates them into your CMake or C++ build.
+
+that automates:
 
 1. Fetching and building libraries (`fmt`, `spdlog`)
 2. Handling **transitive dependencies**
@@ -138,6 +374,139 @@ Docker alone cannot:
 4. Integration with **CMake**, **Bazel**, or other build systems
 
 Conan ensures **reproducible builds** and eliminates manual library management.
+
+Here is a **clean, complete, and simple explanation** of **how Conan works** and **where it gets C++ libraries from**.
+
+---
+
+# **Where does Conan get its C++ libraries from?**
+
+Conan does NOT use OS repositories (APT, yum, apk).
+Instead, Conan gets libraries from **Conan remotes**, the biggest one being:
+
+### ✔ **ConanCenter**
+
+```
+https://center.conan.io/
+```
+
+This is the **main global repository for C++ packages**, containing:
+
+* fmt
+* boost
+* spdlog
+* openssl
+* zlib
+* opencv
+* gtest
+* etc.
+
+Everything downloaded via Conan is hosted **outside your OS** and completely independent from apt/yum.
+
+---
+
+# **What happens when you install a lib with Conan?**
+
+If you run:
+
+```bash
+conan install . --build=missing
+```
+
+Conan will:
+
+---
+
+## **Step 1 — Look at remotes**
+
+It checks the remotes you have configured:
+
+```bash
+conan remote list
+```
+
+You will usually see:
+
+```
+conancenter: https://center.conan.io
+```
+
+This is where it downloads packages.
+
+---
+
+## **Step 2 — Download a binary package**
+
+If a prebuilt binary (matching your compiler + OS + version) exists, Conan downloads it into your cache:
+
+```
+~/.conan2/p
+```
+
+---
+
+## **Step 3 — If no binary exists → Conan builds from source**
+
+If no prebuilt package matches your system, Conan automatically:
+
+* downloads the source code (from GitHub usually)
+* builds it using your compiler (g++, clang++)
+* stores the compiled package in the Conan cache
+* reuses it for future builds
+
+---
+
+# Key point
+
+> **Conan libraries do NOT come from your Linux system (APT).
+> They come from ConanCenter or other Conan remotes.**
+
+This means Conan versions are usually **more modern** than apt packages.
+
+---
+
+# **How Conan integrates with CMake**
+
+Conan generates a `conan_toolchain.cmake`.
+
+Then you write:
+
+```cmake
+find_package(fmt REQUIRED)
+```
+
+And Conan makes sure the correct include paths and library paths are provided.
+
+---
+
+# Example
+
+If you want fmt with Conan:
+
+```bash
+conan new fmt/11.0.2 --template=cmake_lib
+conan install . --build=missing
+```
+
+Conan gets the fmt recipe from ConanCenter → downloads/builts the library → puts it in:
+
+```
+~/.conan2/p/<package_hash>/
+```
+
+---
+
+# **Conan vs APT: where libs come from**
+
+| Tool                    | Where it gets C++ libraries                 |
+| ----------------------- | ------------------------------------------- |
+| **APT**                 | From the OS repos (Ubuntu mirrors)          |
+| **Conan**               | From **ConanCenter** or other Conan remotes |
+| **vcpkg**               | From GitHub (ports)                         |
+| **Docker (apt inside)** | Again from OS repos inside container        |
+
+So Conan is **independent** of APT, Docker, distro, etc.
+
 
 ### Example `conanfile.txt`
 
@@ -169,6 +538,10 @@ CMakeToolchain
 6. Generates integration files (`conan_toolchain.cmake`, `<pkg>-config.cmake`)
 7. Builds project with correct dependencies
 8. Caches binaries for future builds
+
+# Final Summary
+
+> **Conan downloads C++ libraries from online Conan remotes (mainly ConanCenter), not from your OS or Docker image. If no binary matches your system, Conan builds the library from source and caches it locally.**
 
 ---
 
