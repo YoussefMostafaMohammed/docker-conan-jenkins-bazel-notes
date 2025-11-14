@@ -4,20 +4,59 @@
 
 1. [Introduction](#introduction)
 2. [What is Docker?](#what-is-docker)
+   1. [Key Features](#key-features)
+   2. [Analogy](#analogy)
 3. [How Docker Works for C++](#how-docker-works-for-c)
+   1. [Step 1: Choose a Base Image](#step-1-choose-a-base-image)
+   2. [Step 2: Install Build Tools](#step-2-install-build-tools)
+   3. [Step 3: Copy Project into Container](#step-3-copy-project-into-container)
+   4. [Step 4: Build Your Project](#step-4-build-your-project)
+   5. [Docker Does Not Copy Whole Project](#docker-does-not-copy-whole-project)
+      1. [1. During `docker build`](#1-during-docker-build)
+         * Build Context
+         * Image Layers Location
+      2. [2. When Running a Container](#2-when-running-a-container-docker-run)
+      3. [3. Using Volumes or Bind Mounts](#3-using-volumes-or-bind-mounts)
+         * Bind Mounts
+         * Named Volumes
+      4. [Summary Table](#summary-table)
+      5. [Check Where Your Container Filesystem Lives](#check-where-your-container-filesystem-lives)
 4. [Where Docker Gets C++ Libraries](#where-docker-gets-c-libraries)
+   1. [System Libraries vs Third-party Libraries](#system-libraries-vs-third-party-libraries)
+   2. [Detailed Explanation](#detailed-explanation)
+   3. [Different Base Images](#if-you-use-a-different-base-image)
+   4. [Final Summary](#final-summary-one-sentence)
 5. [Why Docker Alone is Not Enough](#why-docker-alone-is-not-enough)
 6. [What is Conan and Why Use It?](#what-is-conan-and-why-use-it)
+   1. [Where Does Conan Get Libraries From?](#where-does-conan-get-its-c-libraries-from)
+   2. [Step-by-Step Process](#what-happens-when-you-install-a-lib-with-conan)
+      * Step 1: Look at Remotes
+      * Step 2: Download Binary Package
+      * Step 3: Build From Source if Needed
+   3. [Conan Integration with CMake](#how-conan-integrates-with-cmake)
+   4. [Example](#example)
+   5. [Conan vs APT](#conan-vs-apt-where-libs-come-from)
+   6. [Example `conanfile.txt`](#example-conanfiletxt)
 7. [Conan Internal Process](#conan-internal-process)
 8. [Docker + Conan Together](#docker--conan-together)
 9. [What is Bazel and Why Use It?](#what-is-bazel-and-why-use-it)
+   1. [Why Bazel Over CMake?](#why-bazel-over-cmake)
 10. [Using Bazel Instead of CMake](#using-bazel-instead-of-cmake)
+    1. [Example BUILD File](#example-build-file)
+    2. [Build and Run](#build-and-run)
 11. [Alternatives Without Conan](#alternatives-without-conan)
 12. [Best Practices](#best-practices)
 13. [What is Jenkins?](#what-is-jenkins)
 14. [Workflow Diagram – Docker + Conan + Bazel + Jenkins](#workflow-diagram--docker--conan--bazel--jenkins)
 15. [Conclusion](#conclusion)
 16. [Project](#project)
+    1. [Getting Started](#getting-started)
+
+---
+
+If you want, I can **also add links for the remaining sub-subsections** like **“Summary Table”**, **“Analogy”**, **“Step 1 / Step 2 / Step 3”** so your TOC becomes **fully navigable in GitHub**.
+
+Do you want me to do that next?
 
 ---
 
@@ -105,7 +144,7 @@ docker build -t myimage .
 
 Docker creates:
 
-### **📌 Build context**
+### ** Build context**
 
 * It sends the **current directory (`.`)** to the Docker daemon.
 * The **build context is stored temporarily**, but Docker does **NOT save your project files permanently**.
@@ -267,7 +306,7 @@ So **all g++ packages and C++ standard libraries come from Ubuntu’s official s
 
 ---
 
-# 📦 **What exactly gets installed?**
+# **What exactly gets installed?**
 
 APT installs:
 
@@ -327,7 +366,7 @@ apk add g++ libstdc++
 
 ---
 
-# 🎯 Final Summary (one sentence)
+# Final Summary (one sentence)
 
 > **Docker does not provide g++ libraries — the C++ compiler and libstdc++ come from the package repositories of the base Linux image (Ubuntu, Debian, Alpine, etc.).**
 
