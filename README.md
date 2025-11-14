@@ -13,12 +13,12 @@
    4. [Step 4: Build Your Project](#step-4-build-your-project)
    5. [Docker Does Not Copy Whole Project](#docker-does-not-copy-whole-project)
       1. [1. During `docker build`](#1-during-docker-build)
-         * Build Context
-         * Image Layers Location
+         * [Build Context](#build-context)
+         * [Image Layers Location](#where-are-image-layers-stored)
       2. [2. When Running a Container](#2-when-running-a-container-docker-run)
       3. [3. Using Volumes or Bind Mounts](#3-using-volumes-or-bind-mounts)
-         * Bind Mounts
-         * Named Volumes
+         * [Bind Mounts](#a-bind-mount)
+         * [Named Volumes](#b-named-volumes)
       4. [Summary Table](#summary-table)
       5. [Check Where Your Container Filesystem Lives](#check-where-your-container-filesystem-lives)
 4. [Where Docker Gets C++ Libraries](#where-docker-gets-c-libraries)
@@ -30,9 +30,9 @@
 6. [What is Conan and Why Use It?](#what-is-conan-and-why-use-it)
    1. [Where Does Conan Get Libraries From?](#where-does-conan-get-its-c-libraries-from)
    2. [Step-by-Step Process](#what-happens-when-you-install-a-lib-with-conan)
-      * Step 1: Look at Remotes
-      * Step 2: Download Binary Package
-      * Step 3: Build From Source if Needed
+      * [Step 1: Look at Remotes](#step-1--look-at-remotes)
+      * [Step 2: Download Binary Package](#step-2--download-a-binary-package)
+      * [Step 3: Build From Source if Needed](#step-3--if-no-binary-exists--conan-builds-from-source)
    3. [Conan Integration with CMake](#how-conan-integrates-with-cmake)
    4. [Example](#example)
    5. [Conan vs APT](#conan-vs-apt-where-libs-come-from)
@@ -79,13 +79,13 @@ By the end, you’ll understand how to create **fully reproducible C++ builds** 
 
 **Docker** is a platform for creating, running, and managing **containers**—lightweight, isolated Linux environments.
 
-**Key features:**
+<a id="key-features"></a>**Key features:**
 
 * **Isolation:** Containers run independently of the host system
 * **Portability:** Runs the same on any machine
 * **Reproducibility:** Guarantees consistent OS, compiler, and environment across developers and CI/CD
 
-**Analogy:**
+<a id="analogy"></a>**Analogy:**
 
 > Docker = Your **kitchen** (oven, utensils, temperature)
 > Ensures every chef works in the same kitchen
@@ -94,8 +94,8 @@ By the end, you’ll understand how to create **fully reproducible C++ builds** 
 
 ## How Docker Works for C++
 
-1. **Choose a base image** (e.g., `ubuntu:22.04`)
-2. **Install build tools** inside the container:
+<a id="step-1-choose-a-base-image"></a>1. **Choose a base image** (e.g., `ubuntu:22.04`)
+<a id="step-2-install-build-tools"></a>2. **Install build tools** inside the container:
 
 ```dockerfile
 FROM ubuntu:22.04
@@ -103,14 +103,14 @@ RUN apt update && apt install -y \
     g++ cmake make ninja-build pkg-config python3 python3-pip
 ```
 
-3. **Copy your project** into the container:
+<a id="step-3-copy-project-into-container"></a>3. **Copy your project** into the container:
 
 ```dockerfile
 COPY . /app
 WORKDIR /app
 ```
 
-4. **Build your project:**
+<a id="step-4-build-your-project"></a>4. **Build your project:**
 
 ```bash
 cmake -B build -S .
@@ -127,7 +127,7 @@ Simple programs compile successfully without third-party package managers.
 
 ---
 
-Docker **does NOT copy your whole project into a global folder on your system.**
+<a id="docker-does-not-copy-whole-project"></a>Docker **does NOT copy your whole project into a global folder on your system.**
 Where Docker “saves” files depends on **how you build or run the container**.
 
 Below is the full explanation:
@@ -144,13 +144,13 @@ docker build -t myimage .
 
 Docker creates:
 
-### ** Build context**
+<a id="build-context"></a>### ** Build context**
 
 * It sends the **current directory (`.`)** to the Docker daemon.
 * The **build context is stored temporarily**, but Docker does **NOT save your project files permanently**.
 * Only the **filesystem layers** produced by RUN / COPY / ADD are saved into the **image layers**.
 
-### *Where are image layers stored?*
+<a id="where-are-image-layers-stored"></a>### *Where are image layers stored?*
 
 On Linux (including Ubuntu / WSL2):
 
@@ -190,7 +190,7 @@ This contains the **merged root filesystem** for that container.
 
 # 3. When using volumes or bind mounts
 
-## **A) Bind mount**
+<a id="a-bind-mount"></a>## **A) Bind mount**
 
 If you do:
 
@@ -205,7 +205,7 @@ That folder remains wherever it originally is.
 
 ---
 
-## **B) Named volumes**
+<a id="b-named-volumes"></a>## **B) Named volumes**
 
 If you run:
 
@@ -250,7 +250,7 @@ It returns something like:
 
 ## Where Docker Gets C++ Libraries
 
-Docker base images only include **system libraries**. Third-party libraries like `fmt`, `spdlog`, `Boost`, or `OpenCV` must be installed manually:
+<a id="system-libraries-vs-third-party-libraries"></a>Docker base images only include **system libraries**. Third-party libraries like `fmt`, `spdlog`, `Boost`, or `OpenCV` must be installed manually:
 
 ```dockerfile
 RUN apt install -y libfmt-dev libspdlog-dev libboost-dev
@@ -456,7 +456,7 @@ Conan will:
 
 ---
 
-## **Step 1 — Look at remotes**
+<a id="step-1--look-at-remotes"></a>## **Step 1 — Look at remotes**
 
 It checks the remotes you have configured:
 
@@ -474,7 +474,7 @@ This is where it downloads packages.
 
 ---
 
-## **Step 2 — Download a binary package**
+<a id="step-2--download-a-binary-package"></a>## **Step 2 — Download a binary package**
 
 If a prebuilt binary (matching your compiler + OS + version) exists, Conan downloads it into your cache:
 
@@ -484,7 +484,7 @@ If a prebuilt binary (matching your compiler + OS + version) exists, Conan downl
 
 ---
 
-## **Step 3 — If no binary exists → Conan builds from source**
+<a id="step-3--if-no-binary-exists--conan-builds-from-source"></a>## **Step 3 — If no binary exists → Conan builds from source**
 
 If no prebuilt package matches your system, Conan automatically:
 
@@ -775,3 +775,4 @@ cd QuantumLog
 docker build --build-arg BUILD_SYSTEM=bazel --build-arg USE_CONAN=false -t quantumlog-bazel .
 docker run --rm quantumlog-bazel
 ```
+
